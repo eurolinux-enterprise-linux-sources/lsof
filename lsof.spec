@@ -1,7 +1,7 @@
 Summary: A utility which lists open files on a Linux/UNIX system
 Name: lsof
 Version: 4.82
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: zlib
 Group: Development/Debuggers
 
@@ -30,6 +30,10 @@ Patch4: lsof_4.85-multi-e-option.patch
 # 795799 - lsof fails to suppress warning messages if -b -w options are used
 # and some nfs volume mounted
 Patch5: lsof_4.82-nfs-warn.patch
+# 772991 - fixed NFS output
+Patch6: lsof_4.86D-nfs.patch
+# 668099 - added support for SCTP connections
+Patch7: lsof_4.86-sctp.patch
 
 %description
 Lsof stands for LiSt Open Files, and it does just that: it lists
@@ -43,6 +47,8 @@ UNIX system.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
+%patch7 -p1
 
 %build
 LSOF_VSTR=2.6.16 LINUX_BASE=/proc ./Configure -n linux
@@ -66,6 +72,12 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_mandir}/man*/*
 
 %changelog
+* Thu Nov 27 2014 Peter Schiffer <pschiffe@redhat.com> 4.82-5
+- resolves: #772991
+  fixed NFS output
+- resolves: #668099
+  added support for SCTP connections
+
 * Wed Feb 22 2012 Peter Schiffer <pschiffe@redhat.com> 4.82-4
 - resolves: #795799
   lsof fails to suppress warning messages if -b -w option is used
