@@ -1,7 +1,7 @@
 Summary: A utility which lists open files on a Linux/UNIX system
 Name: lsof
 Version: 4.82
-Release: 2%{?dist}
+Release: 4%{?dist}
 License: zlib
 Group: Development/Debuggers
 
@@ -25,6 +25,11 @@ Patch1: lsof_4.81-threads.patch
 Patch2: lsof_4.83A-selinux-typo.patch
 # 671480 - [RFE] Ability to exclude a file descriptors corresponding to a particular file system
 Patch3: lsof_4.85C-exempt-filesystem.patch
+# 747375 - multiple occurrence of "+|-e" parameter is ignored
+Patch4: lsof_4.85-multi-e-option.patch
+# 795799 - lsof fails to suppress warning messages if -b -w options are used
+# and some nfs volume mounted
+Patch5: lsof_4.82-nfs-warn.patch
 
 %description
 Lsof stands for LiSt Open Files, and it does just that: it lists
@@ -36,6 +41,8 @@ UNIX system.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 LSOF_VSTR=2.6.16 LINUX_BASE=/proc ./Configure -n linux
@@ -59,6 +66,15 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_mandir}/man*/*
 
 %changelog
+* Wed Feb 22 2012 Peter Schiffer <pschiffe@redhat.com> 4.82-4
+- resolves: #795799
+  lsof fails to suppress warning messages if -b -w option is used
+  and some nfs volume mounted
+
+* Fri Nov 04 2011 Peter Schiffer <pschiffe@redhat.com> 4.82-3
+- resolves: #747375
+  multiple occurrence of "+|-e" parameter is ignored
+
 * Tue Aug 23 2011 Peter Schiffer <pschiffe@redhat.com> 4.82-2
 - resolves: #671480
   [RFE] Add ability to exclude a file descriptors corresponding to a particular file system
