@@ -1,7 +1,7 @@
 Summary: A utility which lists open files on a Linux/UNIX system
 Name: lsof
 Version: 4.82
-Release: 1.2%{?dist}
+Release: 2%{?dist}
 License: zlib
 Group: Development/Debuggers
 
@@ -23,6 +23,8 @@ BuildRequires: libselinux-devel
 Patch1: lsof_4.81-threads.patch
 # Backport of upstream patch
 Patch2: lsof_4.83A-selinux-typo.patch
+# 671480 - [RFE] Ability to exclude a file descriptors corresponding to a particular file system
+Patch3: lsof_4.85C-exempt-filesystem.patch
 
 %description
 Lsof stands for LiSt Open Files, and it does just that: it lists
@@ -33,6 +35,7 @@ UNIX system.
 %setup -q -n %{lsofrh}
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 LSOF_VSTR=2.6.16 LINUX_BASE=/proc ./Configure -n linux
@@ -56,6 +59,10 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_mandir}/man*/*
 
 %changelog
+* Tue Aug 23 2011 Peter Schiffer <pschiffe@redhat.com> 4.82-2
+- resolves: #671480
+  [RFE] Add ability to exclude a file descriptors corresponding to a particular file system
+
 * Mon Jun 28 2010 Karel Zak <kzak@redhat.com> 4.82-1.2
 - fix #605085 - broken strict-aliasing rules
 
