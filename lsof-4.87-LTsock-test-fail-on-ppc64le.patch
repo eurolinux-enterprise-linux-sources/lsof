@@ -1,0 +1,45 @@
+diff -up ./dialects/linux/dproc.c.ori ./dialects/linux/dproc.c
+--- ./dialects/linux/dproc.c.ori	2017-09-05 09:39:00.602482719 +0200
++++ ./dialects/linux/dproc.c	2017-09-05 09:49:43.079902156 +0200
+@@ -829,10 +829,10 @@ process_id(idp, idpl, cmd, uid, pid, ppi
+ /*
+  * Process the ID's current working directory info.
+  */
++	efs = 0;
+ 	if (!Ckscko) {
+ 	    (void) make_proc_path(idp, idpl, &path, &pathl, "cwd");
+ 	    alloc_lfile(CWD, -1);
+-	    efs = 0;
+ 	    if (getlinksrc(path, pbuf, sizeof(pbuf), (char **)NULL) < 1) {
+ 		if (!Fwarn) {
+ 		    (void) memset((void *)&sb, 0, sizeof(sb));
+@@ -878,13 +878,13 @@ process_id(idp, idpl, cmd, uid, pid, ppi
+ /*
+  * Process the ID's root directory info.
+  */
++	lnk = ss = 0;
+ 	if (!Ckscko) {
+ 	    (void) make_proc_path(idp, idpl, &path, &pathl, "root");
+ 	    alloc_lfile(RTD, -1);
+ 	    if (getlinksrc(path, pbuf, sizeof(pbuf), (char **)NULL) < 1) {
+ 		if (!Fwarn) {
+ 		    (void) memset((void *)&sb, 0, sizeof(sb));
+-		    lnk = ss = 0;
+ 		    (void) snpf(nmabuf, sizeof(nmabuf), "(readlink: %s)",
+ 			strerror(errno));
+ 		    nmabuf[sizeof(nmabuf) - 1] = '\0';
+@@ -925,13 +925,12 @@ process_id(idp, idpl, cmd, uid, pid, ppi
+ /*
+  * Process the ID's execution info.
+  */
++	lnk = ss = txts = 0;
+ 	if (!Ckscko) {
+-	    txts = 0;
+ 	    (void) make_proc_path(idp, idpl, &path, &pathl, "exe");
+ 	    alloc_lfile("txt", -1);
+ 	    if (getlinksrc(path, pbuf, sizeof(pbuf), (char **)NULL) < 1) {
+ 		(void) memset((void *)&sb, 0, sizeof(sb));
+-		lnk = ss = 0;
+ 		if (!Fwarn) {
+ 		    if ((errno != ENOENT) || uid) {
+ 			(void) snpf(nmabuf, sizeof(nmabuf), "(readlink: %s)",
