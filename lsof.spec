@@ -1,7 +1,7 @@
 Summary: A utility which lists open files on a Linux/UNIX system
 Name: lsof
 Version: 4.87
-Release: 2%{?dist}
+Release: 4%{?dist}
 # Sendmail .. lib/snpf.c
 # LGPLv2+  .. lib/regex.c, regex.h
 License: zlib and Sendmail and LGPLv2+
@@ -44,6 +44,12 @@ install -p -m 0644 lsof.8 ${RPM_BUILD_ROOT}%{_mandir}/man8
 %{_mandir}/man*/*
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 4.87-4
+- Mass rebuild 2014-01-24
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 4.87-3
+- Mass rebuild 2013-12-27
+
 * Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 4.87-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
