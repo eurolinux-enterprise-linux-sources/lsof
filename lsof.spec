@@ -1,7 +1,7 @@
 Summary: A utility which lists open files on a Linux/UNIX system
 Name: lsof
 Version: 4.87
-Release: 6%{?dist}
+Release: 2%{?dist}
 # Sendmail .. lib/snpf.c
 # LGPLv2+  .. lib/regex.c, regex.h
 License: zlib and Sendmail and LGPLv2+
@@ -18,9 +18,6 @@ URL: http://people.freebsd.org/~abe/
 Source0: %{lsofrh}.tar.xz
 Source1: upstream2downstream.sh
 
-Patch0: lsof-4.87-LTsock-test-fail-on-ppc64le.patch
-Patch1: lsof-4.87-ignore-tasks-option.patch
-
 BuildRequires: libselinux-devel
 
 %description
@@ -30,9 +27,6 @@ UNIX system.
 
 %prep
 %setup -q -n %{lsofrh}
-
-%patch0 -p1
-%patch1 -p1
 
 %build
 ./Configure -n linux
@@ -50,20 +44,6 @@ install -p -m 0644 lsof.8 ${RPM_BUILD_ROOT}%{_mandir}/man8
 %{_mandir}/man*/*
 
 %changelog
-* Tue Feb 20 2018 Jan Rybar <jrybar@redhat.com> - 4.87-6
-- Option -Ki now ignores process threads
-- Resolves: rhbz#1437014
-
-* Tue Sep 05 2017 Jan Rybar <jrybar@redhat.com> - 4.87-5
-- LTsock test failure on ppc64le
-- Resolves: rhbz#1459256
-
-* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 4.87-4
-- Mass rebuild 2014-01-24
-
-* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 4.87-3
-- Mass rebuild 2013-12-27
-
 * Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 4.87-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
