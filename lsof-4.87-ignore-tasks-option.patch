@@ -1,0 +1,227 @@
+diff -up ./lsof.8.ori ./lsof.8
+--- ./lsof.8.ori	2018-02-20 16:45:18.347856323 +0100
++++ ./lsof.8	2018-02-20 16:45:26.204823914 +0100
+@@ -6,7 +6,7 @@ lsof \- list open files
+ .SH SYNOPSIS
+ .B lsof
+ [
+-.B \-?abChKlnNOPRtUvVX
++.B \-?abChlnNOPRtUvVX
+ ] [
+ .BI -A " A"
+ ] [
+@@ -30,6 +30,8 @@ lsof \- list open files
+ ] [
+ .BI \-k " k"
+ ] [
++.BI \-K " k"
++] [
+ .BI +|\-L " [l]"
+ ] [
+ .BI +|\-m " m"
+@@ -963,7 +965,7 @@ Here are some sample addresses:
+ 	:time \- either TCP, UDP or UDPLITE time service port
+ .fi
+ .TP \w'names'u+4
+-.B \-K
++.BI \-K " k"
+ selects the listing of tasks (threads) of processes, on dialects
+ where task (thread) reporting is supported.
+ (If help output \- i.e., the output of the
+@@ -973,6 +975,15 @@ or
+ options \- shows this option, then task (thread) reporting is
+ supported by the dialect.)
+ .IP
++If
++.B \-K
++is followed by a value,
++.IR k ,
++it must be ``i''.  That causes
++.I lsof
++to ignore tasks, particularly in the default, list\-everything case
++when no other options are specified.
++.IP
+ When
+ .B \-K
+ and
+diff -up ./lsof.h.ori ./lsof.h
+--- ./lsof.h.ori	2018-02-19 17:41:00.082833606 +0100
++++ ./lsof.h	2018-02-19 18:39:40.336086710 +0100
+@@ -491,6 +491,8 @@ struct afsnode {			/* AFS pseudo-node st
+ };
+ # endif	/* defined(HAS_AFS) */
+ 
++extern int AllProc;
++
+ # if	defined(HAS_STD_CLONE)
+ struct clone {
+ 	int dx;			/* index of device entry in Devtp[] */
+@@ -672,6 +674,7 @@ extern struct fieldsel FieldSel[];
+ extern int Hdr;
+ 
+ enum IDType {PGID, PID};
++extern int  IgnTasks;
+ extern char *InodeFmt_d;
+ extern char *InodeFmt_x;
+ extern int LastPid;
+@@ -938,8 +941,9 @@ extern int Procsrch;
+ extern int PrPass;
+ extern int RptTm;
+ extern struct l_dev **Sdev;
+-extern int Selall;
++extern int SelAll;
+ extern int Selflags;
++extern int SelProc;
+ extern int Setgid;
+ extern int Selinet;
+ extern int Setuidroot;
+diff -up ./main.c.ori ./main.c
+--- ./main.c.ori	2018-02-19 17:20:33.058670928 +0100
++++ ./main.c	2018-02-19 18:26:41.245793075 +0100
+@@ -181,7 +181,7 @@ main(argc, argv)
+ #endif	/* defined(HASKOPT) */
+ 
+ #if	defined(HASTASKS)
+-	    "K",
++	    "K:",
+ #else	/* !defined(HASTASKS) */
+ 	    "",
+ #endif	/* defined(HASTASKS) */
+@@ -575,10 +575,27 @@ main(argc, argv)
+ #endif	/* defined(HASKOPT) */
+ 
+ #if	defined(HASTASKS)
+-		case 'K':
++	    case 'K':
++		if (!GOv || *GOv == '-' || *GOv == '+') {
+ 		    Ftask = 1;
++		    IgnTasks = 0;
+ 		    Selflags |= SELTASK;
+-		    break;
++		    if (GOv) {
++			GOx1 = GObk[0];
++			GOx2 = GObk[1];
++		    }
++		} else {
++		    if (!strcasecmp(GOv, "i")) {
++			Ftask = 0;
++			IgnTasks = 1;
++			Selflags &= ~SELTASK;
++		   } else {
++			(void) fprintf(stderr,
++			    "%s: -K not followed by i (but by %s)\n", Pn, GOv);
++			err = 1;
++		   }
++		}
++		break;
+ #endif	/* defined(HASTASKS) */
+ 
+ 	    case 'l':
+@@ -966,6 +983,11 @@ main(argc, argv)
+ 	    }
+ 	}
+ /*
++ * If IgnTasks is set, remove SELTASK from SelAll and SelProc.
++ */
++	SelAll = IgnTasks ? (SELALL & ~SELTASK) : SELALL;
++	SelProc = IgnTasks ? (SELPROC & ~SELTASK) : SELPROC;
++/*
+  * Check for argument consistency.
+  */
+ 	if (Cmdnx && Cmdni) {
+@@ -1143,12 +1165,12 @@ main(argc, argv)
+ 		    "%s: no select options to AND via -a\n", Pn);
+ 		usage(1, 0, 0);
+ 	    }
+-	    Selflags = SELALL;
++	    Selflags = SelAll;
+ 	} else {
+ 	    if (GOx1 >= argc && (Selflags & (SELNA|SELNET)) != 0
+ 	    &&  (Selflags & ~(SELNA|SELNET)) == 0)
+ 		Selinet = 1;
+-	    Selall = 0;
++	    AllProc = 0;
+ 	}
+ /*
+  * Get the device for DEVDEV_PATH.
+diff -up ./proc.c.ori ./proc.c
+--- ./proc.c.ori	2018-02-19 18:39:57.188006540 +0100
++++ ./proc.c	2018-02-19 18:44:33.993689693 +0100
+@@ -498,7 +498,7 @@ examine_lproc()
+  *	o  listing is selected by an ANDed option set (not all options)
+  *	   that includes a single PID selection -- this one.
+  */
+-	if ((Lp->sf & SELPID) && !Selall) {
++	if ((Lp->sf & SELPID) && !AllProc) {
+ 	    if ((Selflags == SELPID)
+ 	    ||  (Fand && (Selflags & SELPID))) {
+ 		sbp = 1;
+@@ -648,7 +648,7 @@ is_file_sel(lp, lf)
+ 	}
+ #endif	/* defined(HASSECURITY) && defined(HASNOSOCKSECURITY) */
+ 
+-	if (Selall)
++	if (AllProc)
+ 	    return(1);
+ 	if (Fand && ((lf->sf & Selflags) != Selflags))
+ 	    return(0);
+@@ -742,13 +742,13 @@ is_proc_excl(pid, pgid, uid, pss, sf)
+  * network selections from the file flags, so that the tests in is_file_sel()
+  * work as expected.
+  */
+-	if (Selall) {
++	if (AllProc) {
+ 	    *pss = PS_PRI;
+ 
+ #if	defined(HASSECURITY) && defined(HASNOSOCKSECURITY)
+-	    *sf = SELALL & ~(SELNA | SELNET);
++	    *sf = SelAll & ~(SELNA | SELNET);
+ #else	/* !defined(HASSECURITY) || !defined(HASNOSOCKSECURITY) */
+-	    *sf = SELALL;
++	    *sf = SelAll;
+ #endif	/* defined(HASSECURITY) && defined(HASNOSOCKSECURITY) */
+ 
+ 	    return(0);
+diff -up ./store.c.ori ./store.c
+--- ./store.c.ori	2018-02-19 18:39:50.532038205 +0100
++++ ./store.c	2018-02-19 18:42:57.828147181 +0100
+@@ -43,6 +43,8 @@ static char *rcsid = "$Id: store.c,v 1.4
+  * Global storage definitions
+  */
+ 
++int AllProc = 1;		/* all processes are selected (default) */
++
+ #if	defined(HASBLKDEV)
+ struct l_dev *BDevtp = (struct l_dev *)NULL;
+ 				/* block device table pointer */
+@@ -236,6 +238,7 @@ struct fieldsel FieldSel[] = {
+ };
+ 
+ int Hdr = 0;			/* header print status */
++int IgnTasks = 0;		/* ignore tasks when non-zero */
+ char *InodeFmt_d = (char *) NULL;
+ 				/* INODETYPE decimal printf specification */
+ char *InodeFmt_x = (char *) NULL;
+@@ -320,8 +323,9 @@ int RptTm = 0;			/* repeat time -- set b
+ struct l_dev **Sdev = (struct l_dev **)NULL;
+ 				/* pointer to Devtp[] pointers, sorted
+ 				 * by device */
+-int Selall = 1;			/* all processes are selected (default) */
++int SelAll = 0;			/* SELALL flags, modified by IgnTasks */
+ int Selflags = 0;		/* selection flags -- see SEL* in lsof.h */
++int SelProc = 0;		/* SELPROC flags, modified by IgnTasks */
+ int Setgid = 0;			/* setgid state */
+ int Selinet = 0;		/* select only Internet socket files */
+ int Setuidroot = 0;		/* setuid-root state */
+diff -up ./dialects/linux/dproc.c.ori ./dialects/linux/dproc.c
+--- ./dialects/linux/dproc.c.ori	2018-02-21 14:32:56.779061847 +0100
++++ ./dialects/linux/dproc.c	2018-02-21 16:10:53.896590180 +0100
+@@ -228,7 +228,7 @@ gather_proc_info()
+ 	     * If only ORed process selection options have been specified,
+ 	     * enable conditional file skipping and socket file only checking.
+ 	     */
+-		if ((Selflags & SELFILE) || !(Selflags & SELPROC))
++		if ((Selflags & SELFILE) || !(Selflags & SelProc))
+ 		    Cckreg = Ckscko = 0;
+ 		else
+ 		    Cckreg = Ckscko = 1;
